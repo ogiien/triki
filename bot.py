@@ -125,6 +125,7 @@ class PeripheralDelegate(NSObject):
         self.rx_characteristic = None
         self.tx_characteristic = None
         self.vendor_characteristic = None
+        self.vendor_value = b"\x00"
         self.battery_characteristic = None
         self.firmware_characteristic = None
         self.ready_timer = None
@@ -173,7 +174,7 @@ class PeripheralDelegate(NSObject):
             CBMutableCharacteristic.alloc().initWithType_properties_value_permissions_(
                 CBUUID.UUIDWithString_(VENDOR_UUID),
                 CBCharacteristicPropertyRead | CBCharacteristicPropertyWrite,
-                NSData.dataWithBytes_length_(b"\x00", 1),
+                None,
                 CBAttributePermissionsReadable | CBAttributePermissionsWriteable,
             )
         )
@@ -295,12 +296,18 @@ class PeripheralDelegate(NSObject):
                     self.pending_chunks.clear()
                     LOG.info("RX: STOP")
             elif uuid == VENDOR_UUID and value:
-                masked_led = bytes((value[0] & 0x01,))
-                self.vendor_characteristic.setValue_(
-                    NSData.dataWithBytes_length_(masked_led, 1)
-                )
+                self.vendor_value = bytes((value[0] & 0x01,))
         if requests:
             manager.respondToRequest_withResult_(requests[0], CBATTErrorSuccess)
+
+    def peripheralManager_didReceiveReadRequest_(
+        self, manager: Any, request: Any
+    ) -> None:
+        if str(request.characteristic().UUID().UUIDString()).upper() != VENDOR_UUID:
+            return
+        value = NSData.dataWithBytes_length_(self.vendor_value, len(self.vendor_value))
+        request.setValue_(value)
+        manager.respondToRequest_withResult_(request, CBATTErrorSuccess)
 
     def peripheralManagerIsReadyToUpdateSubscribers_(self, manager: Any) -> None:
         pass
