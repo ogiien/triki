@@ -94,6 +94,27 @@ def make_imu_frame(lateral_acceleration: int) -> bytes:
     )
 
 
+def split_stream_notifications(stream: bytes | bytearray) -> list[bytes]:
+    if len(stream) != sum(STREAM_NOTIFY_SIZES):
+        raise ValueError("Strumień musi zawierać dokładnie trzy ramki IMU (42 B)")
+    chunks = []
+    offset = 0
+    for size in STREAM_NOTIFY_SIZES:
+        chunks.append(bytes(stream[offset : offset + size]))
+        offset += size
+    return chunks
+
+
+def normalize_bgr_frame(raw: np.ndarray) -> np.ndarray:
+    if raw.ndim != 3:
+        raise ValueError(f"Nieprawidłowy wymiar klatki: {raw.shape}")
+    if raw.shape[2] == 3:
+        return np.ascontiguousarray(raw)
+    if raw.shape[2] == 4:
+        return cv2.cvtColor(raw, cv2.COLOR_BGRA2BGR)
+    raise ValueError(f"Nieobsługiwana liczba kanałów klatki: {raw.shape[2]}")
+
+
 class PeripheralDelegate(NSObject):
     def init(self) -> "PeripheralDelegate":
         self = objc.super(PeripheralDelegate, self).init()
@@ -330,10 +351,7 @@ class PeripheralDelegate(NSObject):
         if not self.pending_chunks and len(self.stream_buffer) < 42:
             self.stream_buffer.extend(make_imu_frame(self.current_accel_x))
             if len(self.stream_buffer) == 42:
-                self.pending_chunks = [
-                    bytes(self.stream_buffer[:size])
-                    for size in STREAM_NOTIFY_SIZES
-                ]
+                self.pending_chunks = split_stream_notifications(self.stream_buffer)
                 self.stream_buffer.clear()
 
         while self.pending_chunks:
@@ -498,7 +516,7 @@ def vision_worker(
                     )
                     if raw.size == 0:
                         raise RuntimeError("MSS zwrócił pustą klatkę")
-                    frame = cv2.cvtColor(raw, cv2.COLOR_BGRA2BGR)
+                    frame = normalize_bgr_frame(raw)
                     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
                     height, width = frame.shape[:2]
                     now = time.monotonic()

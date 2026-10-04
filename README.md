@@ -4,15 +4,18 @@ Autopilot eksperymentalny dla macOS: analizuje lokalnie widoczne okno QuickTime 
 
 ## Instalacja
 
-W Terminalu przejdź do sklonowanego repozytorium:
+Możesz sklonować repozytorium albo pobrać ZIP ze strony GitHuba: wybierz **Code → Download ZIP**, rozpakuj archiwum i otwórz Terminal w folderze `triki-main` (na przykład `cd ~/Downloads/triki-main`). Jeśli używasz `git clone`, przejdź do katalogu `triki` poleceniem `cd ~/triki`.
+
+W katalogu projektu utwórz środowisko i zainstaluj zależności:
 
 ```bash
-cd triki
 python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install pyobjc-framework-Cocoa pyobjc-framework-CoreFoundation pyobjc-framework-CoreBluetooth pyobjc-framework-Quartz opencv-python mss numpy
+python -m pip install pyobjc-framework-Cocoa pyobjc-framework-CoreBluetooth pyobjc-framework-Quartz opencv-python mss numpy
 ```
+
+Pakiet `pyobjc-framework-Cocoa` dostarcza także moduł `CoreFoundation`; nie instaluj nieistniejącego pakietu `pyobjc-framework-CoreFoundation`. Python 3.9 z macOS jest obsługiwany przez zgodną wersję PyObjC, więc nie trzeba instalować osobnej wersji Pythona ani usuwać istniejącego `.venv`.
 
 ## Uruchomienie
 
