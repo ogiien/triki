@@ -127,6 +127,7 @@ class PeripheralDelegate(NSObject):
         self.vendor_characteristic = None
         self.vendor_value = b"\x00"
         self.battery_characteristic = None
+        self.battery_value = b"\x64"
         self.firmware_characteristic = None
         self.ready_timer = None
         self.tx_subscribed = False
@@ -189,7 +190,7 @@ class PeripheralDelegate(NSObject):
             CBMutableCharacteristic.alloc().initWithType_properties_value_permissions_(
                 CBUUID.UUIDWithString_(BATTERY_LEVEL_UUID),
                 CBCharacteristicPropertyRead | CBCharacteristicPropertyNotify,
-                NSData.dataWithBytes_length_(b"\x64", 1),
+                None,
                 CBAttributePermissionsReadable,
             )
         )
@@ -303,10 +304,14 @@ class PeripheralDelegate(NSObject):
     def peripheralManager_didReceiveReadRequest_(
         self, manager: Any, request: Any
     ) -> None:
-        if str(request.characteristic().UUID().UUIDString()).upper() != VENDOR_UUID:
+        uuid = str(request.characteristic().UUID().UUIDString()).upper()
+        if uuid == VENDOR_UUID:
+            data = self.vendor_value
+        elif uuid == BATTERY_LEVEL_UUID:
+            data = self.battery_value
+        else:
             return
-        value = NSData.dataWithBytes_length_(self.vendor_value, len(self.vendor_value))
-        request.setValue_(value)
+        request.setValue_(NSData.dataWithBytes_length_(data, len(data)))
         manager.respondToRequest_withResult_(request, CBATTErrorSuccess)
 
     def peripheralManagerIsReadyToUpdateSubscribers_(self, manager: Any) -> None:
@@ -337,7 +342,9 @@ class PeripheralDelegate(NSObject):
             self.last_battery_update = now
             self.battery_update_pending = True
         if self.battery_update_pending and self.battery_subscribed:
-            battery = NSData.dataWithBytes_length_(b"\x64", 1)
+            battery = NSData.dataWithBytes_length_(
+                self.battery_value, len(self.battery_value)
+            )
             self.battery_characteristic.setValue_(battery)
             if self.manager.updateValue_forCharacteristic_onSubscribedCentrals_(
                 battery, self.battery_characteristic, None
