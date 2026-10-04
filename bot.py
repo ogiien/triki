@@ -137,6 +137,8 @@ class PeripheralDelegate(NSObject):
         self.stream_buffer = bytearray()
         self.pending_chunks: list[bytes] = []
         self.services_pending = 0
+        self.nus_service_added = False
+        self.rejected_services: list[str] = []
         self.last_battery_update = time.monotonic()
         self.battery_update_pending = False
         self.target_accel_x = 0
@@ -217,12 +219,28 @@ class PeripheralDelegate(NSObject):
     def peripheralManager_didAddService_error_(
         self, manager: Any, service: Any, error: Any
     ) -> None:
+        service_uuid = str(service.UUID().UUIDString()).upper()
         if error is not None:
-            LOG.error("Nie udało się dodać usługi BLE: %s", error)
-            stop_event.set()
-            return
+            LOG.warning("CoreBluetooth odrzucił usługę %s: %s", service_uuid, error)
+            self.rejected_services.append(service_uuid)
+            if service_uuid == SERVICE_UUID:
+                LOG.error("Wymagana usługa NUS nie została dodana")
+                stop_event.set()
+                return
+        elif service_uuid == SERVICE_UUID:
+            self.nus_service_added = True
+
         self.services_pending -= 1
         if self.services_pending == 0:
+            if not self.nus_service_added:
+                LOG.error("Brak wymaganej usługi NUS; nie uruchamiam reklamy")
+                stop_event.set()
+                return
+            if self.rejected_services:
+                LOG.warning(
+                    "Brakuje usług opcjonalnych; Żappka może ich wymagać: %s",
+                    ", ".join(self.rejected_services),
+                )
             # CoreBluetooth has no API for manufacturer data or a separate scan response.
             LOG.warning(
                 "CoreBluetooth nie ustawia MAC i nie emuluje manufacturer data ani osobnego scan response"
