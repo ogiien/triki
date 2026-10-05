@@ -50,3 +50,4 @@ python bot_windows.py --transport usb:0
 Bot poprosi o MAC random-static kapsla bez wyświetlania wpisu. Obraz jest przetwarzany lokalnie. Domyślnie MSS przechwytuje monitor 1; inny monitor podaj przez `--monitor`, a wycinek przez `--region LEWO GÓRA SZEROKOŚĆ WYSOKOŚĆ`. Opóźnienie dopasuj parametrami `--latency-ms` i `--reaction-ms`. `q` lub `Esc` zamyka podgląd.
 
 Po RX START bot wysyła ramki IMU 100 Hz w notyfikacjach `20/20/2`. Jeśli adapter nie daje dostępu HCI, GATT nie wystartuje. Samo użycie prawidłowego MAC nie gwarantuje akceptacji przez Żappkę — wymagany jest również zgodny adapter i obsługa reklamowania przez jego kontroler.
+# Projekt na bazie https://github.com/Maku-hub/TrikiEmu.
